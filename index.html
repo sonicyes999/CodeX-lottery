@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>抽獎管理系統</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-theme="theme-ocean">
+  <header>
+    <div class="header-top">
+      <div>
+        <h1>抽獎管理系統</h1>
+        <p>支援後台管理、多獎項、權重抽獎、一鍵複製與下載名單。</p>
+      </div>
+      <div class="theme-box">
+        <label for="themeSelect">佈景主題</label>
+        <select id="themeSelect">
+          <option value="theme-ocean">海洋藍</option>
+          <option value="theme-sunset">夕陽橘</option>
+          <option value="theme-forest">森林綠</option>
+          <option value="theme-grape">葡萄紫</option>
+          <option value="theme-rose">玫瑰粉</option>
+          <option value="theme-midnight">午夜暗色</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="card">
+      <h2>1) 參與者管理</h2>
+      <p class="hint">格式：每行一位，<code>姓名,編號,權重</code>。權重可省略，預設 1。</p>
+      <textarea id="participantsInput" rows="8" placeholder="王小明,001,1\n陳小華,002,3\n林小美,003,2"></textarea>
+      <div class="row">
+        <button id="loadParticipantsBtn">載入名單</button>
+        <button id="copyParticipantsBtn">一鍵複製名單</button>
+        <button id="downloadParticipantsBtn">下載名單 CSV</button>
+      </div>
+      <div id="participantsSummary" class="summary"></div>
+    </section>
+
+    <section class="card">
+      <h2>2) 獎項管理</h2>
+      <p class="hint">格式：每行一個獎項，<code>獎項名稱,名額</code>。</p>
+      <textarea id="prizesInput" rows="6" placeholder="頭獎,1\n二獎,2\n三獎,3"></textarea>
+      <div class="row">
+        <button id="loadPrizesBtn">載入獎項</button>
+      </div>
+      <div id="prizesSummary" class="summary"></div>
+    </section>
+
+    <section class="card">
+      <h2>3) 抽獎設定</h2>
+      <div class="row">
+        <label><input type="checkbox" id="allowRepeat" /> 允許重複中獎</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="useWeight" checked /> 啟用權重抽獎</label>
+      </div>
+      <div class="row">
+        <button id="drawAllBtn" class="primary">開始抽獎（全部獎項）</button>
+        <button id="resetBtn">清除資料</button>
+      </div>
+      <div id="status" class="summary"></div>
+    </section>
+
+    <section class="card full">
+      <h2>4) 抽獎結果</h2>
+      <div class="row">
+        <button id="copyWinnersBtn">一鍵複製中獎名單</button>
+        <button id="downloadWinnersBtn">下載中獎名單 CSV</button>
+      </div>
+      <pre id="resultOutput" class="result">尚未抽獎</pre>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
