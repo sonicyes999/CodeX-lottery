@@ -19,6 +19,14 @@ const DEMO_PARTICIPANTS = [
 
 const DEMO_PRIZES = ["頭獎,1", "二獎,2", "三獎,3"].join("\n");
 
+function setStatus(message, type = "info") {
+  const status = $("status");
+  status.textContent = message;
+  status.className = `summary status ${type}`;
+  status.classList.remove("pop");
+  requestAnimationFrame(() => status.classList.add("pop"));
+}
+
 function initTheme() {
   const select = $("themeSelect");
   const saved = localStorage.getItem(THEME_KEY);
@@ -30,6 +38,7 @@ function initTheme() {
   const onThemeChange = (theme) => {
     document.body.setAttribute("data-theme", theme);
     localStorage.setItem(THEME_KEY, theme);
+    setStatus(`🎨 已切換主題：${select.options[select.selectedIndex].text}`, "success");
   };
 
   select.addEventListener("input", (e) => onThemeChange(e.target.value));
@@ -43,13 +52,9 @@ function parseParticipants(raw) {
     .filter(Boolean)
     .map((line, idx) => {
       const [name, id, weightRaw] = line.split(",").map((v) => (v || "").trim());
-      if (!name || !id) {
-        throw new Error(`第 ${idx + 1} 行格式錯誤，需包含 姓名,編號`);
-      }
+      if (!name || !id) throw new Error(`第 ${idx + 1} 行格式錯誤，需包含 姓名,編號`);
       const weight = Math.max(1, Number(weightRaw || "1"));
-      if (!Number.isFinite(weight)) {
-        throw new Error(`第 ${idx + 1} 行權重無效`);
-      }
+      if (!Number.isFinite(weight)) throw new Error(`第 ${idx + 1} 行權重無效`);
       return { name, id, weight };
     });
 }
@@ -61,13 +66,9 @@ function parsePrizes(raw) {
     .filter(Boolean)
     .map((line, idx) => {
       const [name, countRaw] = line.split(",").map((v) => (v || "").trim());
-      if (!name || !countRaw) {
-        throw new Error(`獎項第 ${idx + 1} 行格式錯誤，需為 獎項名稱,名額`);
-      }
+      if (!name || !countRaw) throw new Error(`獎項第 ${idx + 1} 行格式錯誤，需為 獎項名稱,名額`);
       const count = Number(countRaw);
-      if (!Number.isInteger(count) || count <= 0) {
-        throw new Error(`獎項第 ${idx + 1} 行名額必須為正整數`);
-      }
+      if (!Number.isInteger(count) || count <= 0) throw new Error(`獎項第 ${idx + 1} 行名額必須為正整數`);
       return { name, count };
     });
 }
@@ -87,8 +88,8 @@ function simplePick(pool) {
 }
 
 function runDraw({ allowRepeat, useWeight }) {
-  if (state.participants.length === 0) throw new Error("請先載入參與者");
-  if (state.prizes.length === 0) throw new Error("請先載入獎項");
+  if (!state.participants.length) throw new Error("請先載入參與者");
+  if (!state.prizes.length) throw new Error("請先載入獎項");
 
   const available = [...state.participants];
   const winners = [];
@@ -96,9 +97,7 @@ function runDraw({ allowRepeat, useWeight }) {
   for (const prize of state.prizes) {
     const prizeWinners = [];
     for (let i = 0; i < prize.count; i += 1) {
-      if (available.length === 0) {
-        throw new Error("可抽名單不足，請啟用重複中獎或減少名額");
-      }
+      if (!available.length) throw new Error("可抽名單不足，請啟用重複中獎或減少名額");
 
       const picked = useWeight ? weightedPick(available) : simplePick(available);
       prizeWinners.push(picked);
@@ -108,7 +107,6 @@ function runDraw({ allowRepeat, useWeight }) {
         if (index >= 0) available.splice(index, 1);
       }
     }
-
     winners.push({ prize: prize.name, people: prizeWinners });
   }
 
@@ -119,9 +117,7 @@ function winnersToText(winners) {
   const lines = [];
   winners.forEach((group) => {
     lines.push(`【${group.prize}】`);
-    group.people.forEach((p, i) => {
-      lines.push(`${i + 1}. ${p.name} (${p.id}) 權重=${p.weight}`);
-    });
+    group.people.forEach((p, i) => lines.push(`${i + 1}. ${p.name} (${p.id}) 權重=${p.weight}`));
     lines.push("");
   });
   return lines.join("\n").trim();
@@ -130,8 +126,7 @@ function winnersToText(winners) {
 function toCsv(rows, headers) {
   const escape = (v) => {
     const s = String(v ?? "");
-    if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-    return s;
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const head = headers.join(",");
   const body = rows.map((r) => headers.map((h) => escape(r[h])).join(",")).join("\n");
@@ -162,7 +157,7 @@ function loadDemoData() {
   $("participantsSummary").textContent = `已載入 ${state.participants.length} 位參與者（測試資料）`;
   const totalSeats = state.prizes.reduce((n, p) => n + p.count, 0);
   $("prizesSummary").textContent = `已載入 ${state.prizes.length} 個獎項，總名額 ${totalSeats}（測試資料）`;
-  $("status").textContent = "✅ 已載入預設測試資料，可直接抽獎";
+  setStatus("✅ 已載入預設測試資料，可直接抽獎", "success");
 }
 
 function bindEvents() {
@@ -170,9 +165,9 @@ function bindEvents() {
     try {
       state.participants = parseParticipants($("participantsInput").value);
       $("participantsSummary").textContent = `已載入 ${state.participants.length} 位參與者`;
-      $("status").textContent = "";
+      setStatus("參與者名單已更新", "success");
     } catch (err) {
-      $("status").textContent = `❌ ${err.message}`;
+      setStatus(`❌ ${err.message}`, "error");
     }
   });
 
@@ -180,7 +175,7 @@ function bindEvents() {
     try {
       loadDemoData();
     } catch (err) {
-      $("status").textContent = `❌ ${err.message}`;
+      setStatus(`❌ ${err.message}`, "error");
     }
   });
 
@@ -189,9 +184,9 @@ function bindEvents() {
       state.prizes = parsePrizes($("prizesInput").value);
       const totalSeats = state.prizes.reduce((n, p) => n + p.count, 0);
       $("prizesSummary").textContent = `已載入 ${state.prizes.length} 個獎項，總名額 ${totalSeats}`;
-      $("status").textContent = "";
+      setStatus("獎項設定已更新", "success");
     } catch (err) {
-      $("status").textContent = `❌ ${err.message}`;
+      setStatus(`❌ ${err.message}`, "error");
     }
   });
 
@@ -201,11 +196,12 @@ function bindEvents() {
         allowRepeat: $("allowRepeat").checked,
         useWeight: $("useWeight").checked
       });
-      const text = winnersToText(state.winners);
-      $("resultOutput").textContent = text;
-      $("status").textContent = "✅ 抽獎完成";
+      $("resultOutput").textContent = winnersToText(state.winners);
+      $("resultOutput").classList.remove("reveal");
+      requestAnimationFrame(() => $("resultOutput").classList.add("reveal"));
+      setStatus("🎉 抽獎完成", "success");
     } catch (err) {
-      $("status").textContent = `❌ ${err.message}`;
+      setStatus(`❌ ${err.message}`, "error");
     }
   });
 
@@ -213,33 +209,27 @@ function bindEvents() {
     const text = $("participantsInput").value.trim();
     if (!text) return;
     await copyText(text);
-    $("status").textContent = "✅ 已複製參與者名單";
+    setStatus("✅ 已複製參與者名單", "success");
   });
 
   $("copyWinnersBtn").addEventListener("click", async () => {
     if (!state.winners.length) return;
     await copyText(winnersToText(state.winners));
-    $("status").textContent = "✅ 已複製中獎名單";
+    setStatus("✅ 已複製中獎名單", "success");
   });
 
   $("downloadParticipantsBtn").addEventListener("click", () => {
     if (!state.participants.length) return;
-    const csv = toCsv(state.participants, ["name", "id", "weight"]);
-    download("participants.csv", csv);
-    $("status").textContent = "✅ 已下載參與者名單";
+    download("participants.csv", toCsv(state.participants, ["name", "id", "weight"]));
+    setStatus("✅ 已下載參與者名單", "success");
   });
 
   $("downloadWinnersBtn").addEventListener("click", () => {
     if (!state.winners.length) return;
     const rows = [];
-    state.winners.forEach((w) => {
-      w.people.forEach((p) => {
-        rows.push({ prize: w.prize, name: p.name, id: p.id, weight: p.weight });
-      });
-    });
-    const csv = toCsv(rows, ["prize", "name", "id", "weight"]);
-    download("winners.csv", csv);
-    $("status").textContent = "✅ 已下載中獎名單";
+    state.winners.forEach((w) => w.people.forEach((p) => rows.push({ prize: w.prize, name: p.name, id: p.id, weight: p.weight })));
+    download("winners.csv", toCsv(rows, ["prize", "name", "id", "weight"]));
+    setStatus("✅ 已下載中獎名單", "success");
   });
 
   $("resetBtn").addEventListener("click", () => {
@@ -249,7 +239,7 @@ function bindEvents() {
     $("participantsSummary").textContent = "";
     $("prizesSummary").textContent = "";
     $("resultOutput").textContent = "尚未抽獎";
-    $("status").textContent = "已清除資料";
+    setStatus("已清除資料", "info");
   });
 }
 
