@@ -203,6 +203,38 @@ button.primary:hover { background: var(--accent-2); }
 }
 .result.reveal { animation: fadeInUp 260ms ease; }
 
+
+.confetti-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 9999;
+}
+
+@keyframes confettiFall {
+  0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translateY(110vh) rotate(680deg); opacity: 0; }
+}
+
+.confetti {
+  position: absolute;
+  top: -20px;
+  width: 10px;
+  height: 16px;
+  border-radius: 2px;
+  animation-name: confettiFall;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
   </style>
 </head>
 <body data-theme="theme-ocean">
@@ -286,11 +318,11 @@ button.primary:hover { background: var(--accent-2); }
 const state = {
   participants: [],
   prizes: [],
-  winners: []
+  winners: [],
+  isDrawing: false
 };
 
 const $ = (id) => document.getElementById(id);
-
 const THEME_KEY = "lottery_theme";
 
 const DEMO_PARTICIPANTS = [
@@ -310,6 +342,37 @@ function setStatus(message, type = "info") {
   status.className = `summary status ${type}`;
   status.classList.remove("pop");
   requestAnimationFrame(() => status.classList.add("pop"));
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function launchConfetti(duration = 2800, pieces = 140) {
+  const layer = document.createElement("div");
+  layer.className = "confetti-layer";
+  document.body.appendChild(layer);
+
+  const colors = ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899"];
+  for (let i = 0; i < pieces; i += 1) {
+    const dot = document.createElement("span");
+    dot.className = "confetti";
+    dot.style.left = `${Math.random() * 100}vw`;
+    dot.style.background = colors[Math.floor(Math.random() * colors.length)];
+    dot.style.animationDelay = `${Math.random() * 400}ms`;
+    dot.style.animationDuration = `${2200 + Math.random() * 1600}ms`;
+    dot.style.transform = `rotate(${Math.random() * 360}deg)`;
+    layer.appendChild(dot);
+  }
+
+  setTimeout(() => layer.remove(), duration + 1800);
+}
+
+function setDrawingState(isDrawing) {
+  state.isDrawing = isDrawing;
+  const drawBtn = $("drawAllBtn");
+  drawBtn.disabled = isDrawing;
+  drawBtn.textContent = isDrawing ? "抽獎進行中..." : "開始抽獎（全部獎項）";
 }
 
 function initTheme() {
@@ -372,32 +435,6 @@ function simplePick(pool) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-function runDraw({ allowRepeat, useWeight }) {
-  if (!state.participants.length) throw new Error("請先載入參與者");
-  if (!state.prizes.length) throw new Error("請先載入獎項");
-
-  const available = [...state.participants];
-  const winners = [];
-
-  for (const prize of state.prizes) {
-    const prizeWinners = [];
-    for (let i = 0; i < prize.count; i += 1) {
-      if (!available.length) throw new Error("可抽名單不足，請啟用重複中獎或減少名額");
-
-      const picked = useWeight ? weightedPick(available) : simplePick(available);
-      prizeWinners.push(picked);
-
-      if (!allowRepeat) {
-        const index = available.findIndex((p) => p.id === picked.id);
-        if (index >= 0) available.splice(index, 1);
-      }
-    }
-    winners.push({ prize: prize.name, people: prizeWinners });
-  }
-
-  return winners;
-}
-
 function winnersToText(winners) {
   const lines = [];
   winners.forEach((group) => {
@@ -445,6 +482,53 @@ function loadDemoData() {
   setStatus("✅ 已載入預設測試資料，可直接抽獎", "success");
 }
 
+async function runDrawAnimated({ allowRepeat, useWeight }) {
+  if (!state.participants.length) throw new Error("請先載入參與者");
+  if (!state.prizes.length) throw new Error("請先載入獎項");
+
+  const available = [...state.participants];
+  const winners = [];
+  const output = $("resultOutput");
+  output.textContent = "🎬 抽獎秀開始...\n";
+
+  for (const prize of state.prizes) {
+    output.textContent += `\n【${prize.name}】\n`;
+    await sleep(700);
+
+    const prizeWinners = [];
+    for (let i = 0; i < prize.count; i += 1) {
+      if (!available.length) throw new Error("可抽名單不足，請啟用重複中獎或減少名額");
+
+      setStatus(`🎯 正在抽 ${prize.name} 第 ${i + 1} 位...`, "info");
+      output.textContent += "抽選中";
+      for (let step = 0; step < 4; step += 1) {
+        await sleep(220);
+        output.textContent += ".";
+      }
+
+      const picked = useWeight ? weightedPick(available) : simplePick(available);
+      prizeWinners.push(picked);
+
+      output.textContent += `\n${i + 1}. ${picked.name} (${picked.id}) 權重=${picked.weight} ✅\n`;
+      output.classList.remove("reveal");
+      requestAnimationFrame(() => output.classList.add("reveal"));
+      launchConfetti(1800, 60);
+
+      if (!allowRepeat) {
+        const index = available.findIndex((p) => p.id === picked.id);
+        if (index >= 0) available.splice(index, 1);
+      }
+      await sleep(600);
+    }
+
+    winners.push({ prize: prize.name, people: prizeWinners });
+  }
+
+  launchConfetti(3000, 180);
+  setStatus("🎉 全部獎項抽獎完成！", "success");
+  return winners;
+}
+
 function bindEvents() {
   $("loadParticipantsBtn").addEventListener("click", () => {
     try {
@@ -475,18 +559,18 @@ function bindEvents() {
     }
   });
 
-  $("drawAllBtn").addEventListener("click", () => {
+  $("drawAllBtn").addEventListener("click", async () => {
+    if (state.isDrawing) return;
     try {
-      state.winners = runDraw({
+      setDrawingState(true);
+      state.winners = await runDrawAnimated({
         allowRepeat: $("allowRepeat").checked,
         useWeight: $("useWeight").checked
       });
-      $("resultOutput").textContent = winnersToText(state.winners);
-      $("resultOutput").classList.remove("reveal");
-      requestAnimationFrame(() => $("resultOutput").classList.add("reveal"));
-      setStatus("🎉 抽獎完成", "success");
     } catch (err) {
       setStatus(`❌ ${err.message}`, "error");
+    } finally {
+      setDrawingState(false);
     }
   });
 
