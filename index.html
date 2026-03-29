@@ -31,9 +31,15 @@
     <section class="card">
       <h2>1) 參與者管理</h2>
       <p class="hint">格式：每行一位，<code>姓名,編號,權重</code>。權重可省略，預設 1。</p>
-      <textarea id="participantsInput" rows="8" placeholder="王小明,001,1\n陳小華,002,3\n林小美,003,2"></textarea>
+      <textarea id="participantsInput" rows="8" placeholder="王小明,001,1\n陳小華,002,3\n林小美,003,2">王小明,001,1
+陳小華,002,3
+林小美,003,2
+張大華,004,5
+李小安,005,2
+吳小婷,006,1</textarea>
       <div class="row">
         <button id="loadParticipantsBtn">載入名單</button>
+        <button id="loadDemoBtn">重新載入測試資料</button>
         <button id="copyParticipantsBtn">一鍵複製名單</button>
         <button id="downloadParticipantsBtn">下載名單 CSV</button>
       </div>
@@ -43,7 +49,9 @@
     <section class="card">
       <h2>2) 獎項管理</h2>
       <p class="hint">格式：每行一個獎項，<code>獎項名稱,名額</code>。</p>
-      <textarea id="prizesInput" rows="6" placeholder="頭獎,1\n二獎,2\n三獎,3"></textarea>
+      <textarea id="prizesInput" rows="6" placeholder="頭獎,1\n二獎,2\n三獎,3">頭獎,1
+二獎,2
+三獎,3</textarea>
       <div class="row">
         <button id="loadPrizesBtn">載入獎項</button>
       </div>

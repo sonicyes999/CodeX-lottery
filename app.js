@@ -8,6 +8,17 @@ const $ = (id) => document.getElementById(id);
 
 const THEME_KEY = "lottery_theme";
 
+const DEMO_PARTICIPANTS = [
+  "王小明,001,1",
+  "陳小華,002,3",
+  "林小美,003,2",
+  "張大華,004,5",
+  "李小安,005,2",
+  "吳小婷,006,1"
+].join("\n");
+
+const DEMO_PRIZES = ["頭獎,1", "二獎,2", "三獎,3"].join("\n");
+
 function initTheme() {
   const select = $("themeSelect");
   const saved = localStorage.getItem(THEME_KEY);
@@ -16,13 +27,14 @@ function initTheme() {
     select.value = saved;
   }
 
-  select.addEventListener("change", (e) => {
-    const theme = e.target.value;
+  const onThemeChange = (theme) => {
     document.body.setAttribute("data-theme", theme);
     localStorage.setItem(THEME_KEY, theme);
-  });
-}
+  };
 
+  select.addEventListener("input", (e) => onThemeChange(e.target.value));
+  select.addEventListener("change", (e) => onThemeChange(e.target.value));
+}
 
 function parseParticipants(raw) {
   return raw
@@ -140,12 +152,33 @@ async function copyText(text) {
   await navigator.clipboard.writeText(text);
 }
 
+function loadDemoData() {
+  $("participantsInput").value = DEMO_PARTICIPANTS;
+  $("prizesInput").value = DEMO_PRIZES;
+
+  state.participants = parseParticipants(DEMO_PARTICIPANTS);
+  state.prizes = parsePrizes(DEMO_PRIZES);
+
+  $("participantsSummary").textContent = `已載入 ${state.participants.length} 位參與者（測試資料）`;
+  const totalSeats = state.prizes.reduce((n, p) => n + p.count, 0);
+  $("prizesSummary").textContent = `已載入 ${state.prizes.length} 個獎項，總名額 ${totalSeats}（測試資料）`;
+  $("status").textContent = "✅ 已載入預設測試資料，可直接抽獎";
+}
+
 function bindEvents() {
   $("loadParticipantsBtn").addEventListener("click", () => {
     try {
       state.participants = parseParticipants($("participantsInput").value);
       $("participantsSummary").textContent = `已載入 ${state.participants.length} 位參與者`;
       $("status").textContent = "";
+    } catch (err) {
+      $("status").textContent = `❌ ${err.message}`;
+    }
+  });
+
+  $("loadDemoBtn").addEventListener("click", () => {
+    try {
+      loadDemoData();
     } catch (err) {
       $("status").textContent = `❌ ${err.message}`;
     }
@@ -222,3 +255,4 @@ function bindEvents() {
 
 initTheme();
 bindEvents();
+loadDemoData();

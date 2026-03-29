@@ -42,6 +42,10 @@ body[data-theme="theme-midnight"] {
 }
 
 * { box-sizing: border-box; }
+
+body, .card, button, textarea, .result, header {
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
 body {
   margin: 0;
   font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
